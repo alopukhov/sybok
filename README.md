@@ -1,2 +1,3 @@
-# sybok
-Sybok test engine
+# Sybok
+
+Sybok test engine allows running groovy Spock specification without compilation.  

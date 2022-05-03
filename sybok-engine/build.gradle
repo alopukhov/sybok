@@ -1,9 +1,18 @@
 plugins {
     id 'java-library'
+    id 'signing'
+    id 'maven-publish'
 }
+
+description = "Sybok junit engine"
 
 dependencies {
     implementation 'org.spockframework:spock-core:2.0-groovy-3.0'
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
 }
 
 def writeVersion = tasks.register("writeVersionInfo", WriteProperties) {
@@ -23,4 +32,55 @@ tasks.named("processResources", Copy).configure {
         from rootProject.layout.projectDirectory.file("LICENSE")
         into 'META-INF'
     }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = 'sonatype'
+            final isReleaseVersion = !version.toString().toUpperCase().contains("SNAPSHOT")
+            final releaseRepo = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+            final snapshotRepo = "https://oss.sonatype.org/content/repositories/snapshots/"
+            url = isReleaseVersion ? releaseRepo : snapshotRepo
+            credentials {
+                username = findProperty('ossrhUsername')
+                password = findProperty('ossrhPassword')
+            }
+        }
+    }
+
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+
+            pom {
+                name = 'Sybok engine'
+                afterEvaluate {
+                    description = project.description
+                }
+                url = 'https://github.com/alopukhov/sybok'
+                scm {
+                    connection = 'scm:git:git://github.com/alopukhov/sybok'
+                    developerConnection = 'scm:git:git://github.com/alopukhov/sybok'
+                    url = 'https://github.com/alopukhov/sybok'
+                }
+                developers {
+                    developer {
+                        id = 'alopukhov'
+                        name = 'Andrei Lopukhov'
+                    }
+                }
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications
 }
