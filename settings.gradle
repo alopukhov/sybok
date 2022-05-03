@@ -1,0 +1,3 @@
+rootProject.name = 'sybok'
+
+include 'sybok-engine'

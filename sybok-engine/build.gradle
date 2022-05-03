@@ -1,0 +1,26 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    implementation 'org.spockframework:spock-core:2.0-groovy-3.0'
+}
+
+def writeVersion = tasks.register("writeVersionInfo", WriteProperties) {
+    outputFile = project.layout.buildDirectory.file("version-info.properties")
+    property("group", project.group)
+    property("artifact", project.name)
+    property("version", project.version)
+}
+
+tasks.named("processResources", Copy).configure {
+    dependsOn writeVersion
+    with copySpec {
+        from writeVersion
+        into 'META-INF/sybok/'
+    }
+    with copySpec {
+        from rootProject.layout.projectDirectory.file("LICENSE")
+        into 'META-INF'
+    }
+}
