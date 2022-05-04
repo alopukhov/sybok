@@ -1,38 +1,52 @@
 package com.github.alopukhov.sybok.engine;
 
-import org.junit.platform.engine.discovery.ClassSelector;
+import org.junit.platform.engine.EngineDiscoveryRequest;
 import org.junit.platform.engine.discovery.DirectorySelector;
-import org.junit.platform.engine.discovery.DiscoverySelectors;
-import org.junit.platform.engine.support.discovery.SelectorResolver;
+import org.junit.platform.engine.discovery.FileSelector;
+import org.spockframework.runtime.SpecUtil;
 
 import java.io.IOException;
-import java.nio.file.FileVisitResult;
-import java.nio.file.FileVisitor;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
-class DirectoryScriptResolver implements SelectorResolver {
+class CandidatesSelector {
     private final SpecScriptLoader specScriptLoader;
 
-    DirectoryScriptResolver(SpecScriptLoader specScriptLoader) {
-        this.specScriptLoader = requireNonNull(specScriptLoader);
+    CandidatesSelector(SpecScriptLoader specScriptLoader) {
+        this.specScriptLoader = requireNonNull(specScriptLoader, "specScriptLoader");
     }
 
-    @Override
-    public Resolution resolve(DirectorySelector selector, Context context) {
+    Collection<Class<?>> selectCandidates(EngineDiscoveryRequest discoveryRequest) {
+        List<String> classNames = new ArrayList<>();
+        for (FileSelector s : discoveryRequest.getSelectorsByType(FileSelector.class)) {
+            resolveFile(s).ifPresent(classNames::add);
+        }
+        for (DirectorySelector s : discoveryRequest.getSelectorsByType(DirectorySelector.class)) {
+            classNames.addAll(resolveDir(s));
+        }
+        return classNames.stream()
+                .distinct()
+                .map(specScriptLoader::safeLoadClass)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .filter(SpecUtil::isRunnableSpec)
+                .collect(toList());
+    }
+
+    private Collection<String> resolveDir(DirectorySelector selector) {
         Path path = selector.getPath().toAbsolutePath().normalize();
         if (!Files.isDirectory(path)) {
-            return Resolution.unresolved();
+            return Collections.emptyList();
         }
         Optional<Path> scriptRootOpt = specScriptLoader.rootOf(path);
         if (!scriptRootOpt.isPresent()) {
-            return Resolution.unresolved();
+            return Collections.emptyList();
         }
         Path scriptRoot = scriptRootOpt.get();
         DirectoryVisitor visitor = new DirectoryVisitor(resolveBasePackage(scriptRoot, path));
@@ -41,13 +55,37 @@ class DirectoryScriptResolver implements SelectorResolver {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
-        Set<ClassSelector> classSelectors = visitor.classNames.stream()
-                .map(specScriptLoader::safeLoadClass)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .map(DiscoverySelectors::selectClass)
-                .collect(Collectors.toSet());
-        return classSelectors.isEmpty()? Resolution.unresolved() : Resolution.selectors(classSelectors);
+        return visitor.classNames;
+    }
+
+    private Optional<String> resolveFile(FileSelector selector) {
+        Path path = selector.getPath().toAbsolutePath().normalize();
+        if (!isCandidateFile(path.getFileName().toString()) || !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+            return Optional.empty();
+        }
+        Optional<Path> scriptRootOpt = specScriptLoader.rootOf(path);
+        if (!scriptRootOpt.isPresent() || scriptRootOpt.get().equals(path)) {
+            return Optional.empty();
+        }
+        String className = resolveClassName(scriptRootOpt.get(), path);
+        return Optional.of(className);
+    }
+
+    private boolean isCandidateFile(String filename) {
+        return filename.endsWith("Spec.groovy");
+    }
+
+    private String resolveClassName(Path root, Path file) {
+        List<String> elements = new ArrayList<>();
+        String filename = file.getFileName().toString();
+        elements.add(filename.substring(0, filename.length() - ".groovy".length()));
+        file = file.getParent();
+        while (!root.equals(file)) {
+            elements.add(file.getFileName().toString());
+            file = file.getParent();
+        }
+        Collections.reverse(elements);
+        return String.join(".", elements);
     }
 
     private List<String> resolveBasePackage(Path root, Path path) {
@@ -60,7 +98,7 @@ class DirectoryScriptResolver implements SelectorResolver {
         return packagePath;
     }
 
-    private static class DirectoryVisitor implements FileVisitor<Path> {
+    private class DirectoryVisitor implements FileVisitor<Path> {
         private final List<String> packageName;
         private boolean first = true;
         private final List<String> classNames = new ArrayList<>();
@@ -68,7 +106,6 @@ class DirectoryScriptResolver implements SelectorResolver {
         private DirectoryVisitor(List<String> packageName) {
             this.packageName = packageName;
         }
-
 
         @Override
         public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
@@ -83,7 +120,7 @@ class DirectoryScriptResolver implements SelectorResolver {
         @Override
         public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
             String fileName = file.getFileName().toString();
-            if (fileName.toLowerCase(Locale.ROOT).endsWith("spec.groovy")) {
+            if (isCandidateFile(fileName)) {
                 String className = fileName.substring(0, fileName.length() - ".groovy".length());
                 String fullName = Stream.concat(packageName.stream(), Stream.of(className))
                         .collect(Collectors.joining("."));
