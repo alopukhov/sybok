@@ -44,7 +44,7 @@ public class SybokEngine implements TestEngine {
                 .map(td -> new ExecutionRequest(td, listener, request.getConfigurationParameters()))
                 .forEachOrdered(delegate::execute);
         try {
-            ((AutoCloseable) root).close();
+            root.close();
         } catch (Exception exception) {
             // ignore
         }
