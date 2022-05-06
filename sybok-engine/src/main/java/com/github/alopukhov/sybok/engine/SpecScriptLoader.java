@@ -11,11 +11,11 @@ import java.util.Optional;
 
 import static java.util.stream.Collectors.toList;
 
-class SpecScriptLoader implements Closeable {
+public class SpecScriptLoader implements Closeable {
     private final GroovyClassLoader gcl;
     private final List<Path> roots;
 
-    public static SpecScriptLoader create(SybokEngineOptions options, ClassLoader parentClassloader) {
+    static SpecScriptLoader create(SybokEngineOptions options, ClassLoader parentClassloader) {
         GroovyClassLoader gcl = new GroovyClassLoader(parentClassloader);
         List<Path> scriptRoots = options.getScriptRoots().stream()
                 .map(Path::toAbsolutePath)
@@ -39,6 +39,10 @@ class SpecScriptLoader implements Closeable {
     private SpecScriptLoader(GroovyClassLoader gcl, List<Path> roots) {
         this.gcl = gcl;
         this.roots = Collections.unmodifiableList(roots);
+    }
+
+    public List<Path> roots() {
+        return roots;
     }
 
     public Optional<Path> rootOf(Path path) {

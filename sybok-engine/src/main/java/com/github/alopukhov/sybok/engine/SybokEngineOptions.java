@@ -5,30 +5,50 @@ import org.junit.platform.engine.ConfigurationParameters;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.function.Function;
 
-import static java.util.stream.Collectors.collectingAndThen;
+import static java.util.Collections.unmodifiableList;
 import static java.util.stream.Collectors.toList;
 
-public class SybokEngineOptions {
-    public static final String SPOCK_SCRIPT_ENGINE_ROOTS = "sybok.script-roots";
-    private final List<Path> scriptRoots;
+class SybokEngineOptions {
+    private static final String SPOCK_DELEGATING_ENGINE_IDS = "sybok.delegate-engine-ids";
+    private static final String SPOCK_SCRIPT_ENGINE_ROOTS = "sybok.script-roots";
 
-    public static SybokEngineOptions from(ConfigurationParameters parameters) {
+    private final List<Path> scriptRoots;
+    private final List<String> engineIds;
+
+    static SybokEngineOptions from(ConfigurationParameters parameters) {
         List<Path> roots = parameters.get(SPOCK_SCRIPT_ENGINE_ROOTS, ValidatingRootParser.INSTANCE)
-                .orElse(Collections.emptyList());
-        return new SybokEngineOptions(roots);
+                .orElseGet(Collections::emptyList);
+        Collection<String> engineIds = parameters.get(SPOCK_DELEGATING_ENGINE_IDS, TrimStringsTransformer.INSTANCE)
+                .orElseGet(Collections::emptyList);
+        return new SybokEngineOptions(roots, engineIds);
     }
 
-    private SybokEngineOptions(List<Path> scriptRoots) {
-        this.scriptRoots = scriptRoots;
+    private SybokEngineOptions(Collection<Path> scriptRoots, Collection<String> engineIds) {
+        this.scriptRoots = unmodifiableList(new ArrayList<>(scriptRoots));
+        this.engineIds = unmodifiableList(new ArrayList<>(engineIds));
     }
 
     public List<Path> getScriptRoots() {
         return scriptRoots;
+    }
+
+    public List<String> getEngineIds() {
+        return engineIds;
+    }
+
+    private enum TrimStringsTransformer implements Function<String, Collection<String>> {
+        INSTANCE;
+
+        @Override
+        public Collection<String> apply(String s) {
+            return Arrays.stream(s.split(","))
+                    .map(String::trim)
+                    .filter(trimmed -> !trimmed.isEmpty())
+                    .collect(toList());
+        }
     }
 
     private enum ValidatingRootParser implements Function<String, List<Path>> {
@@ -36,12 +56,11 @@ public class SybokEngineOptions {
 
         @Override
         public List<Path> apply(String roots) {
-            List<Path> rootPaths = Arrays.stream(roots.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
+            List<Path> rootPaths = TrimStringsTransformer.INSTANCE.apply(roots)
+                    .stream()
                     .map(Paths::get)
                     .distinct()
-                    .collect(collectingAndThen(toList(), Collections::unmodifiableList));
+                    .collect(toList());
             validateRoots(rootPaths);
             return rootPaths;
         }

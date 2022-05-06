@@ -1,5 +1,5 @@
 plugins {
-    id 'java-library'
+    id 'java'
     id 'signing'
     id 'maven-publish'
 }
@@ -7,7 +7,12 @@ plugins {
 description = "Sybok junit engine"
 
 dependencies {
-    implementation 'org.spockframework:spock-core:2.0-groovy-3.0'
+    implementation 'org.junit.platform:junit-platform-engine:1.8.2'
+    implementation ('org.codehaus.groovy:groovy') {
+        version {
+            prefer '3.0.8'
+        }
+    }
 }
 
 java {

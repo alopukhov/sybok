@@ -1,19 +1,14 @@
 package com.github.alopukhov.sybok.engine;
 
+import com.github.alopukhov.sybok.engine.discovery.DiscoveryContext;
+import com.github.alopukhov.sybok.engine.discovery.EngineAndDescriptor;
 import org.junit.platform.engine.*;
-import org.junit.platform.engine.discovery.ClassSelector;
-import org.junit.platform.engine.discovery.DiscoverySelectors;
-import org.spockframework.runtime.SpockEngine;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static java.util.Optional.ofNullable;
-import static java.util.stream.Collectors.toList;
 
 public class SybokEngine implements TestEngine {
-    private final TestEngine delegate = new SpockEngine();
-
     @Override
     public String getId() {
         return "sybok-engine";
@@ -24,31 +19,38 @@ public class SybokEngine implements TestEngine {
         ConfigurationParameters configurationParameters = discoveryRequest.getConfigurationParameters();
         SybokEngineOptions engineOptions = SybokEngineOptions.from(configurationParameters);
         SpecScriptLoader specScriptLoader = SpecScriptLoader.create(engineOptions, selectBestParentClassLoader());
-        CandidatesSelector candidatesSelector = new CandidatesSelector(specScriptLoader);
-        List<ClassSelector> delegateSelectors = candidatesSelector.selectCandidates(discoveryRequest).stream()
-                .distinct()
-                .map(DiscoverySelectors::selectClass)
-                .collect(toList());
-        DiscoveryRequestWrapper newRequest = new DiscoveryRequestWrapper(delegateSelectors, discoveryRequest);
-        UniqueId subId = uniqueId.append("delegate", this.delegate.getId());
-        TestDescriptor delegateDescriptor = delegate.discover(newRequest, subId);
-        return new SybokEngineDescriptor(uniqueId, specScriptLoader, delegateDescriptor);
+        try {
+            DiscoveryContext context = new DiscoveryContext(uniqueId, specScriptLoader, selectEngines(engineOptions));
+            Collection<EngineAndDescriptor> discovered = context.discover(discoveryRequest);
+            return createDescriptor(specScriptLoader, discovered, uniqueId);
+        } catch (Exception e) {
+            try {
+                specScriptLoader.close();
+            } catch (Exception closeException) {
+                e.addSuppressed(closeException);
+            }
+            throw e;
+        }
+    }
+
+    private TestDescriptor createDescriptor(SpecScriptLoader specScriptLoader,
+                                            Collection<EngineAndDescriptor> discovered,
+                                            UniqueId uniqueId) {
+        SybokEngineDescriptor engineDescriptor = new SybokEngineDescriptor(uniqueId, specScriptLoader);
+        for (EngineAndDescriptor pair : discovered) {
+            engineDescriptor.addChild(pair.descriptor(), pair.engine());
+        }
+        return engineDescriptor;
     }
 
     @Override
     public void execute(ExecutionRequest request) {
         EngineExecutionListener listener = request.getEngineExecutionListener();
-        SybokEngineDescriptor root = (SybokEngineDescriptor) request.getRootTestDescriptor();
-        listener.executionStarted(root);
-        root.getChildren().stream()
-                .map(td -> new ExecutionRequest(td, listener, request.getConfigurationParameters()))
-                .forEachOrdered(delegate::execute);
-        try {
-            root.close();
-        } catch (Exception exception) {
-            // ignore
+        listener.executionStarted(request.getRootTestDescriptor());
+        try (SybokEngineDescriptor root = (SybokEngineDescriptor) request.getRootTestDescriptor()) {
+            root.execute(request);
         }
-        listener.executionFinished(root, TestExecutionResult.successful());
+        listener.executionFinished(request.getRootTestDescriptor(), TestExecutionResult.successful());
     }
 
     @Override
@@ -72,5 +74,19 @@ public class SybokEngine implements TestEngine {
             return loader;
         }
         return getClass().getClassLoader();
+    }
+
+    private List<TestEngine> selectEngines(SybokEngineOptions engineOptions) {
+        Set<String> includedIds = new HashSet<>(engineOptions.getEngineIds());
+        Map<String, TestEngine> engines = new HashMap<>();
+        for (TestEngine testEngine : ServiceLoader.load(TestEngine.class)) {
+            String id = testEngine.getId();
+            if (!testEngine.getClass().equals(this.getClass()) &&
+                    !this.getId().equals(id) &&
+                    (includedIds.isEmpty() || includedIds.contains(id))) {
+                engines.put(id, testEngine);
+            }
+        }
+        return new ArrayList<>(engines.values());
     }
 }
