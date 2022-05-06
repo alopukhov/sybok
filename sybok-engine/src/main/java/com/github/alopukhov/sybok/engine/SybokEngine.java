@@ -9,9 +9,11 @@ import java.util.*;
 import static java.util.Optional.ofNullable;
 
 public class SybokEngine implements TestEngine {
+    public static final String ENGINE_ID = "sybok-engine";
+
     @Override
     public String getId() {
-        return "sybok-engine";
+        return ENGINE_ID;
     }
 
     @Override
@@ -49,6 +51,9 @@ public class SybokEngine implements TestEngine {
         listener.executionStarted(request.getRootTestDescriptor());
         try (SybokEngineDescriptor root = (SybokEngineDescriptor) request.getRootTestDescriptor()) {
             root.execute(request);
+        } catch (Exception e) {
+            listener.executionFinished(request.getRootTestDescriptor(), TestExecutionResult.failed(e));
+            throw e;
         }
         listener.executionFinished(request.getRootTestDescriptor(), TestExecutionResult.successful());
     }

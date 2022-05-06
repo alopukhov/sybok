@@ -9,12 +9,13 @@ import java.nio.file.Path;
 import java.util.*;
 
 class CandidatesSelectorContext {
-    private static final String SCRIPT_EXTENSION = ".groovy";
     private final Map<String, List<DiscoverySelector>> selectorSources = new HashMap<>();
     private final SpecScriptLoader specScriptLoader;
+    private final String scriptExtension;
 
     CandidatesSelectorContext(SpecScriptLoader specScriptLoader) {
         this.specScriptLoader = specScriptLoader;
+        this.scriptExtension = specScriptLoader.scriptExtension();
     }
 
     public List<Path> scriptRoots() {
@@ -30,14 +31,14 @@ class CandidatesSelectorContext {
      * @return filename with script extension removed
      */
     public Optional<String> withoutScriptExtension(String filename) {
-        if (filename.endsWith(SCRIPT_EXTENSION)) {
-            return Optional.of(filename.substring(0, filename.length() - SCRIPT_EXTENSION.length()));
+        if (filename.endsWith(scriptExtension)) {
+            return Optional.of(filename.substring(0, filename.length() - scriptExtension.length()));
         }
         return Optional.empty();
     }
 
     public String withExtension(String filename) {
-        return filename + SCRIPT_EXTENSION;
+        return filename + scriptExtension;
     }
 
     public void registerCandidate(String className, DiscoverySelector source) {

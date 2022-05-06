@@ -7,10 +7,15 @@ plugins {
 description = "Sybok junit engine"
 
 dependencies {
-    implementation 'org.junit.platform:junit-platform-engine:1.8.2'
+    implementation ('org.junit.platform:junit-platform-engine') {
+        version {
+            require '[1.6,2.0['
+            prefer '1.8.2'
+        }
+    }
     implementation ('org.codehaus.groovy:groovy') {
         version {
-            prefer '3.0.8'
+            prefer '3.0.9'
         }
     }
 }
