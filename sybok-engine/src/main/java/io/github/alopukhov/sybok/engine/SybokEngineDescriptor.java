@@ -1,4 +1,4 @@
-package com.github.alopukhov.sybok.engine;
+package io.github.alopukhov.sybok.engine;
 
 import org.junit.platform.engine.*;
 import org.junit.platform.engine.support.descriptor.EngineDescriptor;

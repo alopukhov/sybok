@@ -1,7 +1,7 @@
-package com.github.alopukhov.sybok.engine;
+package io.github.alopukhov.sybok.engine;
 
-import com.github.alopukhov.sybok.engine.discovery.DiscoveryContext;
-import com.github.alopukhov.sybok.engine.discovery.EngineAndDescriptor;
+import io.github.alopukhov.sybok.engine.discovery.DiscoveryContext;
+import io.github.alopukhov.sybok.engine.discovery.EngineAndDescriptor;
 import org.junit.platform.engine.*;
 
 import java.util.*;

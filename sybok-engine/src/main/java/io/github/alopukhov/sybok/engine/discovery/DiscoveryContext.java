@@ -1,6 +1,6 @@
-package com.github.alopukhov.sybok.engine.discovery;
+package io.github.alopukhov.sybok.engine.discovery;
 
-import com.github.alopukhov.sybok.engine.SpecScriptLoader;
+import io.github.alopukhov.sybok.engine.SpecScriptLoader;
 import org.junit.platform.engine.*;
 import org.junit.platform.engine.support.descriptor.AbstractTestDescriptor;
 import org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolver;

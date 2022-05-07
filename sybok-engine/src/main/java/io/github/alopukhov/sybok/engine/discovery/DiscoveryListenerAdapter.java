@@ -1,4 +1,4 @@
-package com.github.alopukhov.sybok.engine.discovery;
+package io.github.alopukhov.sybok.engine.discovery;
 
 import org.junit.platform.engine.DiscoverySelector;
 import org.junit.platform.engine.EngineDiscoveryListener;

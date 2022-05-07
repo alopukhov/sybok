@@ -1,4 +1,4 @@
-package com.github.alopukhov.sybok.engine;
+package io.github.alopukhov.sybok.engine;
 
 import groovy.lang.GroovyClassLoader;
 import org.codehaus.groovy.control.CompilerConfiguration;
