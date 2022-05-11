@@ -10,19 +10,19 @@ import java.util.Map;
 import static java.util.Collections.synchronizedMap;
 
 class SybokEngineDescriptor extends EngineDescriptor implements Closeable {
-    private final SpecScriptLoader specScriptLoader;
+    private final GroovyContext groovyContext;
     private final Map<UniqueId, TestEngine> engines = synchronizedMap(new HashMap<>());
 
-    SybokEngineDescriptor(UniqueId uniqueId, SpecScriptLoader specScriptLoader) {
+    SybokEngineDescriptor(UniqueId uniqueId, GroovyContext groovyContext) {
         super(uniqueId, "Sybok");
-        this.specScriptLoader = specScriptLoader;
+        this.groovyContext = groovyContext;
     }
 
     @Override
     public void close() {
         engines.clear();
         try {
-            specScriptLoader.close();
+            groovyContext.close();
         } catch (Exception ignore) {
             // ignore
         }

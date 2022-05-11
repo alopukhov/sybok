@@ -20,14 +20,14 @@ public class SybokEngine implements TestEngine {
     public TestDescriptor discover(EngineDiscoveryRequest discoveryRequest, UniqueId uniqueId) {
         ConfigurationParameters configurationParameters = discoveryRequest.getConfigurationParameters();
         SybokEngineOptions engineOptions = SybokEngineOptions.from(configurationParameters);
-        SpecScriptLoader specScriptLoader = SpecScriptLoader.create(engineOptions, selectBestParentClassLoader());
+        GroovyContext groovyContext = GroovyContext.create(engineOptions, selectBestParentClassLoader());
         try {
-            DiscoveryContext context = new DiscoveryContext(uniqueId, specScriptLoader, selectEngines(engineOptions));
+            DiscoveryContext context = new DiscoveryContext(uniqueId, groovyContext, selectEngines(engineOptions));
             Collection<EngineAndDescriptor> discovered = context.discover(discoveryRequest);
-            return createDescriptor(specScriptLoader, discovered, uniqueId);
+            return createDescriptor(groovyContext, discovered, uniqueId);
         } catch (Exception e) {
             try {
-                specScriptLoader.close();
+                groovyContext.close();
             } catch (Exception closeException) {
                 e.addSuppressed(closeException);
             }
@@ -35,10 +35,10 @@ public class SybokEngine implements TestEngine {
         }
     }
 
-    private TestDescriptor createDescriptor(SpecScriptLoader specScriptLoader,
+    private TestDescriptor createDescriptor(GroovyContext groovyContext,
                                             Collection<EngineAndDescriptor> discovered,
                                             UniqueId uniqueId) {
-        SybokEngineDescriptor engineDescriptor = new SybokEngineDescriptor(uniqueId, specScriptLoader);
+        SybokEngineDescriptor engineDescriptor = new SybokEngineDescriptor(uniqueId, groovyContext);
         for (EngineAndDescriptor pair : discovered) {
             engineDescriptor.addChild(pair.descriptor(), pair.engine());
         }

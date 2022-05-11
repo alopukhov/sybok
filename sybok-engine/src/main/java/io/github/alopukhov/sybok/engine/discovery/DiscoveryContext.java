@@ -1,6 +1,6 @@
 package io.github.alopukhov.sybok.engine.discovery;
 
-import io.github.alopukhov.sybok.engine.SpecScriptLoader;
+import io.github.alopukhov.sybok.engine.GroovyContext;
 import org.junit.platform.engine.*;
 import org.junit.platform.engine.support.descriptor.AbstractTestDescriptor;
 import org.junit.platform.engine.support.discovery.EngineDiscoveryRequestResolver;
@@ -9,18 +9,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DiscoveryContext {
-    private final SpecScriptLoader specScriptLoader;
+    private final GroovyContext groovyContext;
     private final UniqueId root;
     private final List<TestEngine> delegateEngines;
 
-    public DiscoveryContext(UniqueId root, SpecScriptLoader specScriptLoader, List<TestEngine> delegateEngines) {
-        this.specScriptLoader = specScriptLoader;
+    public DiscoveryContext(UniqueId root, GroovyContext groovyContext, List<TestEngine> delegateEngines) {
+        this.groovyContext = groovyContext;
         this.root = root;
         this.delegateEngines = delegateEngines;
     }
 
     public List<EngineAndDescriptor> discover(EngineDiscoveryRequest request) {
-        CandidatesSelectorContext candidatesSelectorContext = new CandidatesSelectorContext(specScriptLoader);
+        CandidatesSelectorContext candidatesSelectorContext = new CandidatesSelectorContext(groovyContext);
         resolveToCandidates(request, candidatesSelectorContext);
         DiscoveryListenerAdapter listenerAdapter = new DiscoveryListenerAdapter();
         List<DiscoverySelector> nextSelectors = candidatesSelectorContext.nextSelectors(listenerAdapter);

@@ -1,6 +1,6 @@
 package io.github.alopukhov.sybok.engine.discovery;
 
-import io.github.alopukhov.sybok.engine.SpecScriptLoader;
+import io.github.alopukhov.sybok.engine.GroovyContext;
 import org.junit.platform.engine.DiscoverySelector;
 import org.junit.platform.engine.discovery.ClassSelector;
 import org.junit.platform.engine.discovery.DiscoverySelectors;
@@ -10,20 +10,20 @@ import java.util.*;
 
 class CandidatesSelectorContext {
     private final Map<String, List<DiscoverySelector>> selectorSources = new HashMap<>();
-    private final SpecScriptLoader specScriptLoader;
+    private final GroovyContext groovyContext;
     private final String scriptExtension;
 
-    CandidatesSelectorContext(SpecScriptLoader specScriptLoader) {
-        this.specScriptLoader = specScriptLoader;
-        this.scriptExtension = specScriptLoader.scriptExtension();
+    CandidatesSelectorContext(GroovyContext groovyContext) {
+        this.groovyContext = groovyContext;
+        this.scriptExtension = groovyContext.scriptExtension();
     }
 
     public List<Path> scriptRoots() {
-        return specScriptLoader.roots();
+        return groovyContext.roots();
     }
 
     public Optional<Path> rootOf(Path path) {
-        return specScriptLoader.rootOf(path);
+        return groovyContext.rootOf(path);
     }
 
     /**
@@ -48,7 +48,7 @@ class CandidatesSelectorContext {
     public List<DiscoverySelector> nextSelectors(DiscoveryListenerAdapter discoveryListenerAdapter) {
         List<DiscoverySelector> classSelectors = new ArrayList<>();
         selectorSources.forEach((className, originalSelectors) -> {
-            Class<?> candidate = specScriptLoader.safeLoadClass(className).orElse(null);
+            Class<?> candidate = groovyContext.safeLoadClass(className).orElse(null);
             if (candidate == null) {
                 return;
             }

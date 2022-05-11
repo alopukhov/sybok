@@ -12,12 +12,12 @@ import java.util.Optional;
 
 import static java.util.stream.Collectors.toList;
 
-public class SpecScriptLoader implements Closeable {
+public class GroovyContext implements Closeable {
     private final GroovyClassLoader gcl;
     private final List<Path> roots;
     private final String extension;
 
-    static SpecScriptLoader create(SybokEngineOptions options, ClassLoader parentClassloader) {
+    static GroovyContext create(SybokEngineOptions options, ClassLoader parentClassloader) {
         CompilerConfiguration configuration = CompilerConfiguration.DEFAULT;
         GroovyClassLoader gcl = new GroovyClassLoader(parentClassloader, configuration);
         List<Path> scriptRoots = options.getScriptRoots().stream()
@@ -36,10 +36,10 @@ public class SpecScriptLoader implements Closeable {
             }
             throw new IllegalStateException(e);
         }
-        return new SpecScriptLoader(gcl, scriptRoots, configuration.getDefaultScriptExtension());
+        return new GroovyContext(gcl, scriptRoots, configuration.getDefaultScriptExtension());
     }
 
-    private SpecScriptLoader(GroovyClassLoader gcl, List<Path> roots, String extension) {
+    private GroovyContext(GroovyClassLoader gcl, List<Path> roots, String extension) {
         this.gcl = gcl;
         this.roots = Collections.unmodifiableList(roots);
         this.extension = extension;
