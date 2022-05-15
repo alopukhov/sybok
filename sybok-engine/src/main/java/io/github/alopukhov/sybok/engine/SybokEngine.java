@@ -22,7 +22,8 @@ public class SybokEngine implements TestEngine {
         SybokEngineOptions engineOptions = SybokEngineOptions.from(configurationParameters);
         GroovyContext groovyContext = GroovyContext.create(engineOptions, selectBestParentClassLoader());
         try {
-            DiscoveryContext context = new DiscoveryContext(uniqueId, groovyContext, selectEngines(engineOptions));
+            List<TestEngine> testEngines = selectEngines(groovyContext, engineOptions);
+            DiscoveryContext context = new DiscoveryContext(uniqueId, groovyContext, testEngines);
             Collection<EngineAndDescriptor> discovered = context.discover(discoveryRequest);
             return createDescriptor(groovyContext, discovered, uniqueId);
         } catch (Exception e) {
@@ -81,7 +82,7 @@ public class SybokEngine implements TestEngine {
         return getClass().getClassLoader();
     }
 
-    private List<TestEngine> selectEngines(SybokEngineOptions engineOptions) {
+    private List<TestEngine> selectEngines(GroovyContext groovyContext, SybokEngineOptions engineOptions) {
         Set<String> includedIds = new HashSet<>(engineOptions.getEngineIds());
         Map<String, TestEngine> engines = new HashMap<>();
         for (TestEngine testEngine : ServiceLoader.load(TestEngine.class)) {
@@ -89,9 +90,17 @@ public class SybokEngine implements TestEngine {
             if (!testEngine.getClass().equals(this.getClass()) &&
                     !this.getId().equals(id) &&
                     (includedIds.isEmpty() || includedIds.contains(id))) {
-                engines.put(id, testEngine);
+                TestEngine decorated = decorate(groovyContext, testEngine, engineOptions);
+                engines.put(id, decorated);
             }
         }
         return new ArrayList<>(engines.values());
+    }
+
+    private TestEngine decorate(GroovyContext groovyContext, TestEngine testEngine, SybokEngineOptions engineOptions) {
+        if (engineOptions.alterClassloader(testEngine.getId())) {
+            testEngine = groovyContext.decorateClassLoader(testEngine);
+        }
+        return testEngine;
     }
 }

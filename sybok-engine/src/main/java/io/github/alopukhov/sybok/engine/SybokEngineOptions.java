@@ -12,23 +12,35 @@ import static java.util.Collections.unmodifiableList;
 import static java.util.stream.Collectors.toList;
 
 class SybokEngineOptions {
-    private static final String SPOCK_DELEGATING_ENGINE_IDS = "sybok.delegate-engine-ids";
-    private static final String SPOCK_SCRIPT_ENGINE_ROOTS = "sybok.script-roots";
+    private static final String DELEGATING_ENGINE_IDS = "sybok.delegate-engine-ids";
+    private static final String SCRIPT_ENGINE_ROOTS = "sybok.script-roots";
+    private static final String ALTER_CLASSLOADER = "sybok.alter-classloader";
+    private static final boolean ALTER_CLASSLOADER_DEFAULT = false;
+    private static final String DELEGATE_SPECIFIC_PREFIX = "sybok.delegate.";
+    private static final String ALTER_CLASSLOADER_SUFFIX = ".alter-classloader";
 
     private final List<Path> scriptRoots;
     private final List<String> engineIds;
+    private final boolean alterClassloaderDefault;
+    private final ConfigurationParameters parameters;
 
     static SybokEngineOptions from(ConfigurationParameters parameters) {
-        List<Path> roots = parameters.get(SPOCK_SCRIPT_ENGINE_ROOTS, ValidatingRootParser.INSTANCE)
+        List<Path> roots = parameters.get(SCRIPT_ENGINE_ROOTS, ValidatingRootParser.INSTANCE)
                 .orElseGet(Collections::emptyList);
-        Collection<String> engineIds = parameters.get(SPOCK_DELEGATING_ENGINE_IDS, TrimStringsTransformer.INSTANCE)
+        Collection<String> engineIds = parameters.get(DELEGATING_ENGINE_IDS, TrimStringsTransformer.INSTANCE)
                 .orElseGet(Collections::emptyList);
-        return new SybokEngineOptions(roots, engineIds);
+        boolean switchClassloader = parameters.getBoolean(ALTER_CLASSLOADER)
+                .orElse(ALTER_CLASSLOADER_DEFAULT);
+        return new SybokEngineOptions(roots, engineIds, switchClassloader, parameters);
     }
 
-    private SybokEngineOptions(Collection<Path> scriptRoots, Collection<String> engineIds) {
+    private SybokEngineOptions(Collection<Path> scriptRoots,
+                               Collection<String> engineIds,
+                               boolean alterClassloaderDefault, ConfigurationParameters parameters) {
         this.scriptRoots = unmodifiableList(new ArrayList<>(scriptRoots));
         this.engineIds = unmodifiableList(new ArrayList<>(engineIds));
+        this.alterClassloaderDefault = alterClassloaderDefault;
+        this.parameters = parameters;
     }
 
     public List<Path> getScriptRoots() {
@@ -37,6 +49,11 @@ class SybokEngineOptions {
 
     public List<String> getEngineIds() {
         return engineIds;
+    }
+
+    public boolean alterClassloader(String engineId) {
+        String key = DELEGATE_SPECIFIC_PREFIX + engineId + ALTER_CLASSLOADER_SUFFIX;
+        return parameters.getBoolean(key).orElse(alterClassloaderDefault);
     }
 
     private enum TrimStringsTransformer implements Function<String, Collection<String>> {

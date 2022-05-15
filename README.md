@@ -33,6 +33,11 @@ Those folders must exist. Specifying some directory and its ancestor is prohibit
 For example following config considered illegal: `./specs/,./specs/a/b` 
 * `sybok.delegate-engine-ids` comma separated list of engines ids to use.
 Empty list (default) will use all engines found on classpath except sybok itself.
+* `sybok.alter-classloader` (defaults to `false`) alters Thread Context Classloader.
+Use it if delegate engine fails to discover or execute test classes.
+* `sybok.delegate.<delegate-engine-id>.alter-classloader` more finegrained approach to change classloader.
+For example, TestNG will fail to run tests during execution phase.
+Setting `sybok.delegate.testng.alter-classloader` may be helpfull.    
 
 When using JUnit Console you may specify them via `--config` option, e.g.
 `--config sybok.script-roots=./specs/`

@@ -2,6 +2,7 @@ package io.github.alopukhov.sybok.engine;
 
 import groovy.lang.GroovyClassLoader;
 import org.codehaus.groovy.control.CompilerConfiguration;
+import org.junit.platform.engine.TestEngine;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -70,5 +71,9 @@ public class GroovyContext implements Closeable {
     @Override
     public void close() throws IOException {
         gcl.close();
+    }
+
+    TestEngine decorateClassLoader(TestEngine testEngine) {
+        return new TestEngineClassloaderDecorator(testEngine, gcl);
     }
 }
